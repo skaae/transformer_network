@@ -6,6 +6,8 @@ You can import ``TransformerLayer`` from transformerlayer.py and use it as any
 other lasagne layer.
 
 
+Please cite this repository if you use the code.
+
 References
 =======
 
