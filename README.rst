@@ -7,8 +7,8 @@ other lasagne layer.
 
 .. image:: https://raw.githubusercontent.com/skaae/transformer_network/master/combined_small.png
     :alt: Example
-    :width: 600
-    :height: 421
+    :width: 400
+    :height: 278
     :align: center
 
 
