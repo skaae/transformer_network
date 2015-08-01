@@ -42,7 +42,6 @@ l_loc1 = lasagne.layers.DenseLayer(
 l_loc2 = lasagne.layers.DenseLayer(
     l_loc1, num_units=6, b=b, W=lasagne.init.Constant(0.0))
 l_trans = TransformerLayer([l_dim, l_loc2],
-                           transform_type='affine',
                            downsample_factor=downsample)
 l_dim = lasagne.layers.DimshuffleLayer(l_trans, (0, 2, 3, 1))
 

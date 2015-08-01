@@ -45,10 +45,8 @@ class TransformerLayer(lasagne.layers.MergeLayer):
     TODO
 
     """
-    def __init__(self, incoming, transform_type='affine', downsample_factor=1,
-                 **kwargs):
+    def __init__(self, incoming, downsample_factor=1, **kwargs):
         super(TransformerLayer, self).__init__(incoming, **kwargs)
-        self.transform_type = transform_type
         self.downsample_factor = downsample_factor
 
         conv_shp, A_shp = self.input_shapes
@@ -59,8 +57,7 @@ class TransformerLayer(lasagne.layers.MergeLayer):
                              "be [conv_input, A_input]")
 
         if A_shp[-1] != 6:
-            raise ValueError("The A network must have %i outputs when %s "
-                             "is used" % (6, transform_type))
+            raise ValueError("The A network must have 6 outputs")
 
     def get_output_shape_for(self, input_shapes):
         # input dims are bs, num_filters, height, width. Scale height and with
@@ -74,8 +71,7 @@ class TransformerLayer(lasagne.layers.MergeLayer):
         # see eq. (1) and sec 3.1 in ref [1]
         conv_input, theta = inputs
 
-        output = _transform(
-            theta, self.transform_type, conv_input, self.downsample_factor)
+        output = _transform(theta, conv_input, self.downsample_factor)
         return output
 
 
@@ -157,7 +153,7 @@ def _linspace(start, stop, num):
     return T.arange(num, dtype='float32')*step+start
 
 
-def _meshgrid(height, width, type):
+def _meshgrid(height, width):
     # this should be equivalent to:
     #  x_t, y_t = np.meshgrid(np.linspace(-1, 1, width),
     #                         np.linspace(-1, 1, height))
@@ -170,36 +166,21 @@ def _meshgrid(height, width, type):
 
     x_t_flat = x_t.reshape((1, -1))
     y_t_flat = y_t.reshape((1, -1))
-
-    if type == 'affine' or type == 'projective':
-        ones = T.ones_like(x_t_flat)
-    else:
-        raise ValueError("Type should be affine or projective transformation"
-                         "was ", type)
-
+    ones = T.ones_like(x_t_flat)
     grid = T.concatenate([x_t_flat, y_t_flat, ones], axis=0)
     return grid
 
 
-def _transform(theta, type, input, downsample_factor):
+def _transform(theta, input, downsample_factor):
     num_batch, num_channels, height, width = input.shape
-    if type == 'affine':
-        theta = T.reshape(theta, (-1, 2, 3))
-    elif type == 'projective':
-        # http://www.imgfsr.com/CVPR2011/Tutorial6/TransformationFunctions.pdf
-        # p. 9 thata is bs x 8  -> add 1
-        theta = T.concatenate([theta, T.ones((num_batch, 1))], axis=1)
-        theta = T.reshape(theta, (-1, 3, 3))
-    else:
-        raise ValueError("Type should be affine or projective transformation"
-                         "was ", type)
+    theta = T.reshape(theta, (-1, 2, 3))
 
     # grid of (x_t, y_t, 1), eq (1) in ref [1]
     height_f = T.cast(height, 'float32')
     width_f = T.cast(width, 'float32')
     out_height = T.cast(height_f // downsample_factor, 'int64')
     out_width = T.cast(width_f // downsample_factor, 'int64')
-    grid = _meshgrid(out_height, out_width, type)
+    grid = _meshgrid(out_height, out_width)
 
     # Transform A x (x_t, y_t, 1)^T -> (x_s, y_s)
     T_g = T.dot(theta, grid)
