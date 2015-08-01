@@ -10,10 +10,11 @@ class TransformerLayer(lasagne.layers.MergeLayer):
     Parameters
     ----------
     incomings : a list of [:class:`Layer` instance or a tuple]
-        The layers feeding into this layer, The list must have len 2 with
-        the first network being the convolutional input and the second layer
-        being the transformation matrices. The output of the second
-        network should be num_batch x 6.
+        The layers feeding into this layer. The list must have two entries with
+        the first network being a convolutional net and the second layer
+        being the transformation matrices. The first network should have output
+        shape [num_batch, num_channels, height, width]. The output of the
+        second network should be [num_batch, 6].
     downsample_fator : float
         A value of 1 will keep the orignal size of the image.
         Values larger than 1 will down sample the image. Values below 1 will
@@ -30,15 +31,16 @@ class TransformerLayer(lasagne.layers.MergeLayer):
 
     Notes
     -----
-    To initialize the network to to the identity transform init the
+    To initialize the network to the identity transform init the
     ``localization_network`` to something similar to:
 
         b = np.zeros((2, 3), dtype='float32')
         b[0, 0] = 1
         b[1, 1] = 1
+        b = b.flatten()
 
-    And W to small random values like
-        W = lasagne.init.Uniform(0.01)
+    And W to zero.
+        W = lasagne.init.Constant(0.0)
 
     Examples
     --------
@@ -60,7 +62,7 @@ class TransformerLayer(lasagne.layers.MergeLayer):
             raise ValueError("The A network must have 6 outputs")
 
     def get_output_shape_for(self, input_shapes):
-        # input dims are bs, num_filters, height, width. Scale height and with
+        # input dims are bs, num_filters, height, width. Scale height and width
         # by downsample factor
         shp = input_shapes[0]
         return list(shp[:2]) + [
@@ -89,7 +91,6 @@ def _repeat(x, n_repeats):
 def _interpolate(im, x, y, downsample_factor):
     # constants
     num_batch, height, width, channels = im.shape
-
     height_f = T.cast(height, 'float32')
     width_f = T.cast(width, 'float32')
     out_height = T.cast(height_f // downsample_factor, 'int64')
@@ -98,7 +99,7 @@ def _interpolate(im, x, y, downsample_factor):
     max_y = T.cast(im.shape[1] - 1, 'int64')
     max_x = T.cast(im.shape[2] - 1, 'int64')
 
-    # scale indices from -1, 1 to 0 - width/height
+    # scale indices from [-1, 1] to [0, width/height]
     x = (x + 1.0)*(width_f) / 2.0
     y = (y + 1.0)*(height_f) / 2.0
 
@@ -154,7 +155,7 @@ def _linspace(start, stop, num):
 
 
 def _meshgrid(height, width):
-    # this should be equivalent to:
+    # This should be equivalent to:
     #  x_t, y_t = np.meshgrid(np.linspace(-1, 1, width),
     #                         np.linspace(-1, 1, height))
     #  ones = np.ones(np.prod(x_t.shape))
