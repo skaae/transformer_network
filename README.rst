@@ -1,5 +1,8 @@
 This has moved to lasagne
 =========================
+
+**See https://github.com/skaae/recurrent-spatial-transformer-code**   
+
 The SpatialTransformerLayer has been moved to Lasagne. The Lasagne version is
 identical except for very minor interface changes.
 
